@@ -3,8 +3,74 @@
     <head>
         <title>bem^templates HTML template engine with BEM in mind</title>
         <script type="text/javascript" src="bemt1.js"></script>
+
+
+        <link rel="stylesheet" type="text/css" href="test/jasmine/lib/jasmine-core/jasmine.css">
+		<script type="text/javascript" src="test/jasmine/lib/jasmine-core/jasmine.js"></script>
+		<script type="text/javascript" src="test/jasmine/lib/jasmine-core/jasmine-html.js"></script>
+		<script type="text/javascript" src="test/jasmine/lib/jasmine-core/boot.js"></script>
     </head>
     <body>
+	    <script type="text/javascript">
+
+			describe("Tree Parser", function() {
+				it("can follow simple nesting", function() {
+					var result = bemt.parseTree('section\n  div\n    p\n      span');
+					var correct = [
+						{
+							string : 'section',
+							children : [
+								{
+									string : 'div',
+									children : [
+										{
+											string : 'p',
+											children : [
+												{ string : 'span' }
+											]
+										}
+									]
+								}
+							]
+						}
+					];
+					expect(result).toEqual(correct);
+				});
+
+				it("skips empty lines", function() {
+					var result = bemt.parseTree('section\n\n  div\n\nsection');
+					var correct = [
+						{
+							string: 'section',
+							children: [
+								{ string: 'div' }
+							]
+						},
+						{ string : 'section' }
+					]
+					expect(result).toEqual(correct);
+				});
+
+				it("can ignore offset of the first level nodes", function() {
+					var result = bemt.parseTree(' section\n   div\n section');
+					var correct = [
+						{
+							string: 'section',
+							children: [
+								{ string: 'div' }
+							]
+						},
+						{ string : 'section' }
+					]
+					expect(result).toEqual(correct);
+				});
+
+				it("understands both tabs and spaces for offset, even mixed", function() {
+
+				});
+			});
+
+	    </script>
 
     </body>
 </html>

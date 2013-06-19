@@ -66,7 +66,7 @@
 				// get line offset
 				var offsetMatch = line.match(reOffset);
 
-				if (offsetMatch && offsetsArray.length) {
+				if (offsetMatch) {
 					var offset = offsetMatch[1],
 						string = offsetMatch[2],
 						parent = null,
@@ -75,7 +75,7 @@
 					for (var j = offsetsArray.length - 1; j >= 0; j--) {
 						// if there is an offset like this – create sibling (child of the parent)
 						if (offset === offsetsArray[j].offset) {
-							parent = offsetsArray[j - 1].node;
+							parent = (offsetsArray[j - 1])? offsetsArray[j - 1].node : null;
 							parentOffsetIdx = j;
 							break;
 						}
