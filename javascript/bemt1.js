@@ -1,15 +1,27 @@
 (function(global) {
 	var bemt = function() {
-        var reNotEmpty = /\S/,
-            reOffset = /^(\s+)(.*)/,
-            reStringSplit = /([^"\s]*("[^"]*")[^"\s]*)|[^"\s]+/g;
+        var reStringSplit = /([^"\s]*("[^"]*")[^"\s]*)|[^"\s]+/g;
+
+        // global settings
+        // change via set method
+        var settings = {
+        	// output
+        	mode: "html", // available "html", "xml", "text"?
+
+        	// dev tools
+        	debug: true, // adds line/token positions in json and throws warnings if smth goes wrong
+        	console: null // custom console object
+        }
 
 		function parseTree(source) {
-			var linesArray = [], // source, splitted by newline symbol
+	        var reNotEmpty = /\S/,
+	            reOffset = /^(\s+)(.*)/,
+ 				linesArray = [], // source, splitted by newline symbol
 				resultsArray = [], // json with tree-like structure
 					// [{ string: 'parent 1', children: [{ string: 'children', ... }] }, { string: 'parent 2' }]
-				offsetsArray = []; // array with all ancestor offsets to the current line
+				offsetsArray = [], // array with all ancestor offsets to the current line
 					// [{ node: *pointer to resultsArray node*, offset: '  ' }, { node: *pointer to resultsArray node*, offset: '    ' }]
+				currentLine = 0;
 
 			// helper functions
 			function setOffset(node, offset, position) {
@@ -25,8 +37,12 @@
 				var len = resultsArray.push({
 					string: string
 				});
+				var node = resultsArray[len - 1];
+				if (settings.debug) {
+					node.lineNo = currentLine
+				}
 				// set new start offset, with new branch as a start node
-				setOffset(resultsArray[len - 1], offset, 0);
+				setOffset(node, offset, 0);
 			}
 
 			function createChild(string, offset, parent, parentOffsetIdx) {
@@ -43,8 +59,12 @@
 				var len = parent.children.push({
 					string: string
 				})
+				var node = parent.children[len - 1];
+				if (settings.debug) {
+					node.lineNo = currentLine
+				}
 				// add new offset to offsetsArray, at the parent position
-				setOffset(parent.children[len - 1], offset, parentOffsetIdx);
+				setOffset(node, offset, parentOffsetIdx);
 			}
 
 			// splitting templateText to an array
@@ -53,6 +73,7 @@
 			// 
 			for (var i = 0, len = linesArray.length; i < len; i++) {
 				var line = linesArray[i];
+				currentLine = i + 1;
 				// ignore empty lines
 				if (!reNotEmpty.test(line)) continue;
 
