@@ -9,7 +9,7 @@
         	mode: "html", // available "html", "xml", "text"?
 
         	// dev tools
-        	debug: true, // adds line/token positions in json and throws warnings if smth goes wrong
+        	debug: false, // adds line/token positions in json and throws warnings if smth goes wrong
         	console: null // custom console object
         }
 
@@ -25,52 +25,38 @@
 
 			// helper functions
 			function setOffset(node, offset, position) {
-				offsetsArray.length = position;
+				offsetsArray.length = position || 0;
 				offsetsArray.push({
 					node: node,
 					offset: offset
 				});
 			}
 
-			function createBranch(string, offset) {
-				// adding new branch to resultsArray at the root level
-				var len = resultsArray.push({
-					string: string
-				});
-				var node = resultsArray[len - 1];
-				if (settings.debug) {
-					node.lineNo = currentLine
+			function createLine(string, offset, parent, parentOffsetIdx) {
+				var lineArray = resultsArray;
+				if (parent) {
+					// if parent has no children array - create one
+					if (!parent.children) {
+						parent.children = [];
+					}
+					lineArray = parent.children;
 				}
-				// set new start offset, with new branch as a start node
-				setOffset(node, offset, 0);
-			}
+				var line = {
+					string: string
+				}
+				if (settings.debug) {
+					line.lineNo = currentLine;
+				}
+				var len = lineArray.push(line);
 
-			function createChild(string, offset, parent, parentOffsetIdx) {
-				// if there's no parent node, we should create new root branch
-				if (!parent) {
-					createBranch(string, offset);
-					return;
-				}
-				// if parent has no children array - create one
-				if (!parent.children) {
-					parent.children = [];
-				}
-				// add new node to the children array
-				var len = parent.children.push({
-					string: string
-				})
-				var node = parent.children[len - 1];
-				if (settings.debug) {
-					node.lineNo = currentLine
-				}
 				// add new offset to offsetsArray, at the parent position
-				setOffset(node, offset, parentOffsetIdx);
+				setOffset(lineArray[len - 1], offset, parentOffsetIdx);
 			}
 
 			// splitting templateText to an array
 			linesArray = source.split('\n');
 
-			// 
+			// iterate over all lines
 			for (var i = 0, len = linesArray.length; i < len; i++) {
 				var line = linesArray[i];
 				currentLine = i + 1;
@@ -100,10 +86,10 @@
 							break;
 						}
 					}
-					createChild(string, offset, parent, parentOffsetIdx);
+					createLine(string, offset, parent, parentOffsetIdx);
 				} else {
 					// if there was no offset – create new root branch
-					createBranch(line, '');
+					createLine(line, '');
 				}
 			}
 			return resultsArray;
@@ -121,4 +107,4 @@
 
 
 
-console.log(bemt.parseTree('div\n  div\n    p\n  span'));
+console.log(bemt.parseTree('div\n  div\n    p\n   span'));
