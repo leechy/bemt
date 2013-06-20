@@ -52,11 +52,32 @@
 				});
 
 				it("can ignore offset of the first level nodes", function() {
-					var result = bemt.parseTree(' section\n   div\n section');
+					var result = bemt.parseTree(' section\n   div\n section\nsection');
 					var correct = [
 						{
 							string: 'section',
 							children: [
+								{ string: 'div' }
+							]
+						},
+						{ string : 'section' },
+						{ string : 'section' }
+					]
+					expect(result).toEqual(correct);
+				});
+
+				it("understands both tabs and spaces for offset, even mixed", function() {
+					var result = bemt.parseTree('section\n \tdiv\n \t  | text\n  div\nsection');
+					var correct = [
+						{
+							string: 'section',
+							children: [
+								{
+									string: 'div',
+									children: [
+										{ string: '| text' }
+									]
+								},
 								{ string: 'div' }
 							]
 						},
@@ -65,8 +86,29 @@
 					expect(result).toEqual(correct);
 				});
 
-				it("understands both tabs and spaces for offset, even mixed", function() {
-
+				it("does inline split with proper siblings and children handling", function() {
+					var result = bemt.parseTree('section\n  div | a\n    | text\n  div\nsection');
+					var correct = [
+						{
+							string: 'section',
+							children: [
+								{
+									string: 'div',
+									children: [
+										{
+											string: 'a',
+											children: [
+												{ string: '| text' }
+											]
+										}
+									]
+								},
+								{ string: 'div' }
+							]
+						},
+						{ string : 'section' }
+					]
+					expect(result).toEqual(correct);
 				});
 			});
 

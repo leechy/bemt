@@ -2,6 +2,10 @@
 	var bemt = function() {
         var reStringSplit = /([^"\s]*("[^"]*")[^"\s]*)|[^"\s]+/g;
 
+        var syntax = {
+        	split: '|'
+        }
+
         // global settings
         // change via set method
         var settings = {
@@ -32,7 +36,7 @@
 				});
 			}
 
-			function createLine(string, offset, parent, parentOffsetIdx) {
+			function appendLine(string, offset, parent, parentOffsetIdx) {
 				var lineArray = resultsArray;
 				if (parent) {
 					// if parent has no children array - create one
@@ -86,10 +90,29 @@
 							break;
 						}
 					}
-					createLine(string, offset, parent, parentOffsetIdx);
+
+					// split lines by |
+					var splitArray = string.split(syntax.split);
+					var isText = false;
+					if (splitArray.length > 1) {
+						for (var i = 0, len = splitArray.length; i < len; i++) {
+							var stringPart = splitArray[i];
+							if (i == 0 && stringPart == '') {
+								isText = true;
+							} else {
+								if (isText == true) {
+									stringPart = '|' + stringPart;
+									isText = false;
+								}
+								appendLine(stringPart, offset, parent, parentOffsetIdx);
+							}
+						}
+					} else {
+						appendLine(string, offset, parent, parentOffsetIdx);
+					}
 				} else {
 					// if there was no offset – create new root branch
-					createLine(line, '');
+					appendLine(line, '');
 				}
 			}
 			return resultsArray;
@@ -104,7 +127,3 @@
 		global.bemt = new bemt();
 	}
 })(typeof window === 'undefined' ? this : window);
-
-
-
-console.log(bemt.parseTree('div\n  div\n    p\n   span'));
