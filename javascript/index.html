@@ -87,7 +87,7 @@
 				});
 
 				it("does inline split with proper siblings and children handling", function() {
-					var result = bemt.parseTree('section\n  div | a\n    | text\n  div\nsection');
+					var result = bemt.parseTree('section\n  div | a @href="/" | span "text | with | pipes"\n    | new line text\n  div\nsection');
 					var correct = [
 						{
 							string: 'section',
@@ -96,9 +96,14 @@
 									string: 'div',
 									children: [
 										{
-											string: 'a',
+											string: 'a @href="/"',
 											children: [
-												{ string: '| text' }
+												{
+													string: 'span "text | with | pipes"',
+													children: [
+														{ string: '| new line text' }
+													]
+												}
 											]
 										}
 									]
