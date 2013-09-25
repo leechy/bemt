@@ -120,6 +120,164 @@
 
 
 			describe("Line Parser", function() {
+				it("parses single line element with text content", function() {
+					var result = bemt.tree2json(
+						[
+							{
+								string: "title Hello, World!"
+							}
+						]
+					);
+					var correctAnswer = [
+						{
+							"t": "title",
+							"c": "Hello, World!"
+						}
+					]
+					console.log(result);
+					// expect(result).toEqual(correctAnswer);
+				});
+
+				it("parses single line element with quoted attribute", function() {
+					var result = bemt.tree2json(
+						[
+							{
+								string: 'a @href="http://ya.ru/" Hello, World!'
+							}
+						]
+					);
+					var correctAnswer = [
+						{
+							"t": "a",
+							"a": {
+								"href": "http://ya.ru/"
+							},
+							"c": "Hello, World!"
+						}
+					]
+					console.log(result);
+					// expect(result).toEqual(correctAnswer);
+				});
+
+				it("parses single line element with unquoted attribute", function() {
+					var result = bemt.tree2json(
+						[
+							{
+								string: 'a @href=http://ya.ru/ Hello, World!'
+							}
+						]
+					);
+					var correctAnswer = [
+						{
+							"t": "a",
+							"a": {
+								"href": "http://ya.ru/"
+							},
+							"c": "Hello, World!"
+						}
+					]
+					console.log(result);
+					// expect(result).toEqual(correctAnswer);
+				});
+
+				it("parses element with nested text", function() {
+					var result = bemt.tree2json(
+						[
+							{
+								string: 'a @href=http://ya.ru/',
+								children: [
+									{ string: '| Hello, World!' }
+								]
+							}
+						]
+					);
+					var correctAnswer = [
+						{
+							"t": "a",
+							"a": {
+								"href": "http://ya.ru/"
+							},
+							"c": "Hello, World!"
+						}
+					]
+					console.log(result);
+					// expect(result).toEqual(correctAnswer);
+				});
+
+				it("parses element with nested attribute", function() {
+					var result = bemt.tree2json(
+						[
+							{
+								string: 'a Hello, World!',
+								children: [
+									{ string: '@href=http://ya.ru/' }
+								]
+							}
+						]
+					);
+					var correctAnswer = [
+						{
+							"t": "a",
+							"a": {
+								"href": "http://ya.ru/"
+							},
+							"c": "Hello, World!"
+						}
+					]
+					console.log(result);
+					// expect(result).toEqual(correctAnswer);
+				});
+
+				it("parses element with attribute, nested attribute and text", function() {
+					var result = bemt.tree2json(
+						[
+							{
+								string: 'a @target="_blank"',
+								children: [
+									{ string: '| Hello, World!' },
+									{ string: '@href=http://ya.ru/' }
+								]
+							}
+						]
+					);
+					var correctAnswer = [
+						{
+							"t": "a",
+							"a": {
+								"href": "http://ya.ru/",
+								"target": "_blank"
+							},
+							"c": "Hello, World!"
+						}
+					]
+					console.log(result);
+					// expect(result).toEqual(correctAnswer);
+				});
+
+				it("parses element with nested multyline text", function() {
+					var result = bemt.tree2json(
+						[
+							{
+								string: 'a @href=http://ya.ru/',
+								children: [
+									{ string: '| Hello,' },
+									{ string: '| World!' }
+								]
+							}
+						]
+					);
+					var correctAnswer = [
+						{
+							"t": "a",
+							"a": {
+								"href": "http://ya.ru/"
+							},
+							"c": "Hello, World!"
+						}
+					]
+					console.log(result);
+					// expect(result).toEqual(correctAnswer);
+				});
 			});
 
 
@@ -527,7 +685,6 @@
 						]
 					});
 					var correctAnswer = '<article class="article">\n  <h1 class="article__title">Заголовок</h1>\n  <div class="article__body">\n    Тело новости\n  </div>\n</article>\n';
-					console.log(result);
 					expect(result).toEqual(correctAnswer);
 				});
 
