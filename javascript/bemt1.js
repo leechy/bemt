@@ -36,7 +36,8 @@ function prettyPrint(json) {
 
 (function(global) {
 	var bemt = function() {
-        var reTokenSplit = /([^"\s]*("[^"]*")[^"\s]*)|[^"\s]+/g;
+        var reTokenSplit = /([^"\s]*("[^"]*")[^"\s]*)|[^"\s]+/g,
+        	reTrimQuotes = /^"|"$/g;
 
         var syntax = {
         	split: '|'
@@ -55,6 +56,9 @@ function prettyPrint(json) {
         	modifierPrefix: '_',
         	modifierDelimiter: '_',
 
+        	// template block keyword
+        	blockFromTemplate: '^templateName',
+
         	// dev tools
         	debug: false, // adds line/token positions in json and throws warnings if smth goes wrong
         	console: null // custom console object
@@ -71,13 +75,35 @@ function prettyPrint(json) {
 
         var html = {
         	optionalTag: '|html|head|body|tbody|',
-        	emptyTag: '|area|base|br|col|command|embed|hr|img|input|keygen|link|meta|param|source|track|wbr|',
+        	emptyTag: '|area|base|br|col|command|embed|hr|img|input|keygen|link|meta|param|source|track|wbr|!doctype|!DOCTYPE|',
         	omitEndTag: '|colgroup|dd|dt|li|optgroup|option|p|rp|rt|tbody|td|tfoot|tr|',
         	spaceSeparatedAttrs: '|class|',
 
-        	dontIndentContents: '|h1|h2|h3|h4|h5|h6|p|', // block elements, containing phrasing elements
+        	dontIndentContents: '|title|h1|h2|h3|h4|h5|h6|p|', // block elements, containing phrasing elements
         	dontIndent: '|span|b|i|s|' // inline elements
         }
+
+        // utility functions
+        function isEmpty(obj) {
+        	// null and undefined are empty
+   			if (obj == null) return true;
+   			// Assume if it has a length property with a non-zero value
+			// that that property is correct.
+			if (obj.length && obj.length > 0) {
+				return false;
+			}
+			if (obj.length === 0) {
+				return true;
+			}
+   			for (var key in obj) {
+   				if (hasOwnProperty.call(obj, key)) {
+   					return false;
+   				}
+   			}
+   			return true;
+        }
+
+
 
 		function parseTree(source) {
 	        var reNotEmpty = /\S/,
@@ -211,8 +237,197 @@ function prettyPrint(json) {
 			return resultsArray;
 		}
 
-		function tree2json(json, params) {
-			
+		function tree2json(json, params, parent) {
+			var resultsArray = [];
+
+			function parseString(string, parent) {
+				var current = {},
+					parent = parent || null,
+					attachToParent = false;
+
+				function appendText(string, property) {
+					if (property && property.length) {
+						return property + ' ' + string;
+					} else {
+						return string;
+					}
+				}
+
+				function appendToLastTag(collection, attrName, attrValue, asArray) {
+					if (!current.t && parent.t) {
+						if (attrValue != null) {
+							if (!parent[collection]) {
+								parent[collection] = {};
+							}
+							parent[collection][attrName] = attrValue;
+						} else {
+							if (asArray) {
+								if (!parent[collection]) {
+									parent[collection] = [];
+								}
+								parent[collection].push(attrName);
+							} else {
+								parent[collection] = attrName;
+							}
+						}
+					} else {
+						if (attrValue != null) {
+							if (!current[collection]) {
+								current[collection] = {};
+							}
+							current[collection][attrName] = attrValue;
+						} else {
+							if (asArray) {
+								if (!current[collection]) {
+									current[collection] = [];
+								}
+								current[collection].push(attrName);
+							} else {
+								current[collection] = attrName;
+							}
+						}
+					}
+				}
+
+				// spliting by spces (not )
+				var tokens = string.match(reTokenSplit);
+				// console.log('tokens', tokens);
+
+				// determine what each token stands for
+				// the only problem is with the first one –
+				// it can be a html tag, a pipe, or command
+				for (var i = 0, len = tokens.length; i < len; i++) {
+					switch (tokens[i].substr(0,1)) {
+						case "@":
+							var isAttr = true;
+							
+							// attribute (can be a BEM one)
+							var attrArr = tokens[i].split('=')
+
+							// deal with value first – it's easier
+							var attrValue = '';
+							if (attrArr[1]) {
+								attrValue = attrArr[1].replace(reTrimQuotes, '');
+							}
+
+							// then the name of the attribute
+							var attrName = attrArr[0].substring(1);
+
+							// check for plus/minus at the end
+
+
+							// check for BEM namespace
+								// block
+							if (attrArr[0].indexOf('@b:') == 0) {
+								// it's a block with a name
+								isAttr = false;
+								appendToLastTag("b", attrArr[0].substr(3), null);
+							} else if (attrArr[0].indexOf('@b') == 0) {
+								// empty block
+								isAttr = false;
+								appendToLastTag("b", settings.blockFromTemplate, null);
+							}
+								// element
+							if (attrArr[0].indexOf('@e:') == 0) {
+								// it's a block with a name
+								isAttr = false;
+								appendToLastTag("e", attrArr[0].substr(3), null);
+							} else if (attrArr[0].indexOf('@e') == 0) {
+								// empty block
+								isAttr = false;
+								appendToLastTag("e", settings.blockFromTemplate, null);
+							}
+								// modifiers
+							if (attrArr[0].indexOf('@m:') == 0) {
+								// it's a block with a name
+								isAttr = false;
+								appendToLastTag("m", attrArr[0].substr(3), null, true);
+							}
+
+							
+							// append attribute ...
+							if (isAttr) {
+								appendToLastTag("a", attrName, attrValue);
+							}
+							break;
+						case "|":
+							// text line – should be added to parent object
+							attachToParent = true;
+							break;
+						case "^":
+							// command
+							break;
+						case "$":
+							// param call
+							break;
+						case "-":
+							// param set
+							break;
+						default:
+							if (i == 0) {
+								// tag
+								current.t = tokens[i];
+								// set flag to collect children in right order
+								if (parent && !parent.c) parent.haveChildren = true;
+							} else {
+								// text line
+								if (attachToParent && parent && !current.c) {
+									// if we can attach to parent and there is no current content
+									if (parent.haveChildren) {
+										var restOfTheString = tokens[i];
+										for (var j = i + 1; j < len; j++) {
+											restOfTheString += ' ' + tokens[j];
+										}
+										return restOfTheString;
+									} else if (!parent.c || typeof parent.c === 'string') {
+										parent.c = appendText(tokens[i], parent.c);
+									} else {
+										parent.c.push(tokens[i]);
+									}
+								} else {
+									if (!current.c || typeof current.c === 'string') {
+										current.c = appendText(tokens[i], current.c);
+									} else {
+										current.c.push(tokens[i]);
+									}
+
+								}
+							}
+					}
+				}
+				return current;
+			}
+
+			for (var i in json) {
+				var next = resultsArray.length;
+				var stringObj = parseString(json[i].string, parent);
+				if (!isEmpty(stringObj)) {
+					resultsArray[next] = stringObj;
+				}
+				if (json[i].children) {
+					var childArray = tree2json(json[i].children, params, resultsArray[next]);
+					// remove haveChildren flag (to satisfy tests)
+					if (!isEmpty(childArray)) {
+						if (resultsArray[next].c) {
+							if (typeof resultsArray[next].c === 'string') {
+								var currentString = resultsArray[next].c;
+								resultsArray[next].c = [];
+								resultsArray[next].c.push(currentString);
+								for (var child = 0; child < childArray.length; child++) {
+									resultsArray[next].c.push(childArray[child]);
+								}
+							}
+						} else {
+							resultsArray[next].c = childArray;	
+						}
+					}
+				}
+			}
+			// remove service flag haveChildren
+			for (var child = 0, childArrayLength = resultsArray.length; child < childArrayLength; child++) {
+				delete resultsArray[child].haveChildren;
+			}
+			return resultsArray;
 		}
 
 		function json2html(json, params, block, mods, parentAttrs, parentTag, indentSize) {
@@ -275,7 +490,13 @@ function prettyPrint(json) {
 				}
 			}
 
-			if (json.length) {
+			if (typeof json === 'string') {
+				if (settings.indent) {
+					resultsArray.push(indentSize + json + '\n');
+				} else {
+					resultsArray.push(json);
+				}
+			} else if (json.length) {
 				for (var i in json) {
 					if (json.t) {
 						resultsArray.push(json2html(json[i], params, block, mods, attrs, parentTag, indentSize));
@@ -355,7 +576,11 @@ function prettyPrint(json) {
 				if (json.t) {
 					// push attributes
 					for (var attr in attrs) {
-						resultsArray.push(' ' + attr + '="' + attrs[attr] + '"');
+						if (attrs[attr] === '') {
+							resultsArray.push(' ' + attr);
+						} else {
+							resultsArray.push(' ' + attr + '="' + attrs[attr] + '"');
+						}
 					}
 					// close tag
 					resultsArray.push('>');
